@@ -139,9 +139,11 @@ NOTES:
  *   Rating: 1
  */
 int bitAnd(int x, int y) {
-  return 2;
+        int answer =0;
+        answer = ~(~x | ~y);
+        return answer;
 }
-/* 
+/*
  * getByte - Extract byte n from word x
  *   Bytes numbered from 0 (LSB) to 3 (MSB)
  *   Examples: getByte(0x12345678,1) = 0x56
@@ -150,15 +152,9 @@ int bitAnd(int x, int y) {
  *   Rating: 2
  */
 int getByte(int x, int n) {
-
-
-
-
-
-
-
-  return 2;
-
+        x = x >> (n<<0x3);
+        x = x & 0xff;
+        return x;
 }
 /* 
  * logicalShift - shift x to the right by n, using a logical shift
@@ -169,7 +165,12 @@ int getByte(int x, int n) {
  *   Rating: 3 
  */
 int logicalShift(int x, int n) {
-  return 2;
+  int a = (x >>31) << 31;
+  x = x + a;
+  x = x >> n;
+  a = a >> n;
+  a = a ^ (a<<1);
+  return a+x;
 }
 /*
  * bitCount - returns count of number of 1's in word
@@ -179,8 +180,29 @@ int logicalShift(int x, int n) {
  *   Rating: 4
  */
 int bitCount(int x) {
-  return 2;
+        int one = 0x1;
+        int answer = 0;
+        int realanswer = 0;
+        one = one | (one <<4);
+        one = one | (one <<8);
+        one = one | (one <<16);
+        answer = one & x;
+        answer = answer + (one & (x >> 1));
+        answer = answer + (one & (x >> 2));
+        answer = answer + (one & (x >> 3));
+        realanswer += 0xf & answer;
+        realanswer += 0xf & (answer >> 4);
+        realanswer += 0xf & (answer >> 8);
+        realanswer += 0xf & (answer >> 12);
+        realanswer += 0xf & (answer >> 16);
+        realanswer += 0xf & (answer >> 20);
+        realanswer += 0xf & (answer >> 24);
+        realanswer += 0xf & (answer >> 28);
+
+        return realanswer;
 }
+
+
 /* 
  * bang - Compute !x without using !
  *   Examples: bang(3) = 0, bang(0) = 1
@@ -189,19 +211,23 @@ int bitCount(int x) {
  *   Rating: 4 
  */
 int bang(int x) {
-  return 2;
+        int a = x + (~0x1 +0x1);
+        int b = (a & ~x) >> 31;
+        return !!b;
 }
-/* 
- * tmin - return minimum two's complement integer 
+/*
+ * tmin - return minimum two's complement integer
  *   Legal ops: ! ~ & ^ | + << >>
  *   Max ops: 4
  *   Rating: 1
  */
 int tmin(void) {
-  return 2;
+        int answer = 0x1;
+        answer = answer << 31;
+        return answer;
 }
-/* 
- * fitsBits - return 1 if x can be represented as an 
+/*
+ * fitsBits - return 1 if x can be represented as an
  *  n-bit, two's complement integer.
  *   1 <= n <= 32
  *   Examples: fitsBits(5,3) = 0, fitsBits(-4,3) = 1
@@ -210,8 +236,17 @@ int tmin(void) {
  *   Rating: 2
  */
 int fitsBits(int x, int n) {
-  return 2;
+        int minusone = ~0x1+1;
+        int num1 = x + (1 << (n +(minusone)));
+        num1 = num1 >> 31;
+        int test1 = !(num1);
+        int minusx = ~x+1;
+        int num2 = (1<< (n + (minusone))) + minusx + (minusone);
+        num2 = num2 >>31;
+        int test2 = !(num2);
+        return test1 & test2;
 }
+
 /* 
  * divpwr2 - Compute x/(2^n), for 0 <= n <= 30
  *  Round toward zero
@@ -231,28 +266,46 @@ int divpwr2(int x, int n) {
  *   Rating: 2
  */
 int negate(int x) {
-  return 2;
+        int answer = 0;
+        answer = ~x+1;
+        return answer;
 }
-/* 
- * isPositive - return 1 if x > 0, return 0 otherwise 
+/*
+ * isPositive - return 1 if x > 0, return 0 otherwise
  *   Example: isPositive(-1) = 0.
  *   Legal ops: ! ~ & ^ | + << >>
  *   Max ops: 8
  *   Rating: 3
  */
 int isPositive(int x) {
-  return 2;
+        int n =x;
+        int test1 = !(!n);
+        x = x>>31;
+        int test2 = !(!x);
+        int minus = ~test2+1;
+        return test1+minus;
 }
-/* 
- * isLessOrEqual - if x <= y  then return 1, else return 0 
+/*
+ * isLessOrEqual - if x <= y  then return 1, else return 0
  *   Example: isLessOrEqual(4,5) = 1.
  *   Legal ops: ! ~ & ^ | + << >>
  *   Max ops: 24
  *   Rating: 3
  */
 int isLessOrEqual(int x, int y) {
-  return 2;
+        int signa = x>>31;
+        int signb = y>>31;
+        /*
+         *부호가 서로 같을 때 : ㅇ변으로 넘겨서 확인
+         다를때 : x 가 양수면 false
+         *
+        */
+        signb = (signb&1) ^ (signa&1);
+        y = y + (~x+1);
+        y = y>>31;
+        return ((!(y|signb)) | (signa&signb));
 }
+
 /*
  * ilog2 - return floor(log base 2 of x), where x > 0
  *   Example: ilog2(16) = 4
@@ -275,8 +328,18 @@ int ilog2(int x) {
  *   Rating: 2
  */
 unsigned float_neg(unsigned uf) {
- return 2;
+        int answer = 0;
+        answer = uf ^ 0x80000000;
+        int e = uf & 0x7f800000;
+        int f = uf & 0x007fffff;
+        if ( f && (e == 0x7f800000)) {
+                return uf;
+        }
+        else {
+                return answer;
+        }
 }
+
 /* 
  * float_i2f - Return bit-level equivalent of expression (float) x
  *   Result is returned as unsigned int, but
